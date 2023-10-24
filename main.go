@@ -70,11 +70,11 @@ func createCustomSnooze(start time.Time, end time.Time) error {
 	defer c.Close()
 
 	req := &monitoringpb.CreateSnoozeRequest{
-		Parent: "projects/obfx-fx-prod",
+		Parent: "projects/<<CHANGE_ME>>",
 		Snooze: &monitoringpb.Snooze{
-			DisplayName: fmt.Sprintf("StoneX Fix Alert snooze - %s", start.Format("2006-01-02")),
+			DisplayName: fmt.Sprintf("<<CHANGE_ME>>  Alert snooze - %s", start.Format("2006-01-02")),
 			Criteria: &monitoringpb.Snooze_Criteria{
-				Policies: []string{"projects/obfx-fx-prod/alertPolicies/1793074354357463121"},
+				Policies: []string{"projects/<<CHANGE_ME>>/alertPolicies/1793074354357463121"},
 			},
 			Interval: &monitoringpb.TimeInterval{
 				StartTime: timestamppb.New(start),
