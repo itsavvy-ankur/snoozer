@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3/v2"
 	"cloud.google.com/go/monitoring/apiv3/v2/monitoringpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"gopkg.in/yaml.v2"
 )
 
 func main() {
@@ -18,12 +20,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	start, err := time.ParseInLocation(time.RFC3339, "2023-10-27T00:55:00+01:00", loc)
+	f, err := os.ReadFile("config.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	end := start.AddDate(0, 0, 5)
+	var snoozeConfig SnoozeConfig
+	if err := yaml.Unmarshal(f, &snoozeConfig); err != nil {
+		log.Fatal(err)
+	}
+	//fmt.Printf("%+v\n", snoozeConfig)
+
+	start, err := time.ParseInLocation(time.RFC3339, snoozeConfig.SnoozeSchedule.WeekdayStartDateTime, loc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	end := start.AddDate(0, 0, snoozeConfig.SnoozeSchedule.WeekdayEndDurationDays)
 
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		fmt.Printf("Processing snooze for - %s \n", d.Format("2006-01-02"))
@@ -32,13 +45,13 @@ func main() {
 		switch dayOfWeek {
 		case time.Friday: // Weekend snooze if from Friday 10pm to Sunday 10pm
 			fmt.Printf("Processing snooze for - %s, %s \n", dayOfWeek, d.Format("2006-01-02"))
-			weekendStart, err := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%sT21:55:00+01:00", d.Format("2006-01-02")), loc)
+			weekendStart, err := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%sT%s:00+01:00", d.Format("2006-01-02"), snoozeConfig.SnoozeSchedule.WeekendStartTime), loc)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			weekendEnd := weekendStart.AddDate(0, 0, 2)
-			err = createCustomSnooze(weekendStart, weekendEnd.Add(time.Minute*30))
+			weekendEnd := weekendStart.AddDate(0, 0, snoozeConfig.SnoozeSchedule.WeekendDurationDays)
+			err = createCustomSnooze(weekendStart, weekendEnd.Add(time.Minute*30), snoozeConfig)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -48,7 +61,7 @@ func main() {
 			continue
 		default: // Snooze for weekday
 			fmt.Printf("Processing snooze for - %s, %s \n", dayOfWeek, d.Format("2006-01-02"))
-			err = createCustomSnooze(d, d.Add(time.Minute*30))
+			err = createCustomSnooze(d, d.Add(time.Minute*time.Duration(snoozeConfig.SnoozeSchedule.WeekdayDuration)), snoozeConfig)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -60,7 +73,7 @@ func main() {
 }
 
 // createCustomSnooze creates a custom snooze specified by the config.
-func createCustomSnooze(start time.Time, end time.Time) error {
+func createCustomSnooze(start time.Time, end time.Time, snoozeConfig SnoozeConfig) error {
 
 	ctx := context.Background()
 	c, err := monitoring.NewSnoozeClient(ctx)
@@ -70,11 +83,11 @@ func createCustomSnooze(start time.Time, end time.Time) error {
 	defer c.Close()
 
 	req := &monitoringpb.CreateSnoozeRequest{
-		Parent: "projects/<<CHANGE_ME>>",
+		Parent: fmt.Sprintf("projects/%s", snoozeConfig.ProjectID),
 		Snooze: &monitoringpb.Snooze{
-			DisplayName: fmt.Sprintf("<<CHANGE_ME>>  Alert snooze - %s", start.Format("2006-01-02")),
+			DisplayName: fmt.Sprintf("%s - %s", snoozeConfig.SnoozeDisplayName, start.Format("2006-01-02")),
 			Criteria: &monitoringpb.Snooze_Criteria{
-				Policies: []string{"projects/<<CHANGE_ME>>/alertPolicies/1793074354357463121"},
+				Policies: snoozeConfig.PolicyDetails,
 			},
 			Interval: &monitoringpb.TimeInterval{
 				StartTime: timestamppb.New(start),
@@ -90,4 +103,17 @@ func createCustomSnooze(start time.Time, end time.Time) error {
 
 	fmt.Printf("Created %s\n", m.GetName())
 	return nil
+}
+
+type SnoozeConfig struct {
+	ProjectID         string   `yaml:"project_id"`
+	SnoozeDisplayName string   `yaml:"snooze_display_name"`
+	PolicyDetails     []string `yaml:"policy_details"`
+	SnoozeSchedule    struct {
+		WeekdayStartDateTime   string `yaml:"weekday_start_date_time"`
+		WeekdayEndDurationDays int    `yaml:"weekday_end_duration_days"`
+		WeekdayDuration        int    `yaml:"weekday_duration"`
+		WeekendStartTime       string `yaml:"weekend_start_time"`
+		WeekendDurationDays    int    `yaml:"weekend_duration_days"`
+	} `yaml:"snooze_schedule"`
 }
