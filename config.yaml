@@ -1,0 +1,11 @@
+---
+project_id: "<<project_id>>"
+snooze_display_name: "Example alert snooze"
+policy_details:
+  - "projects/<<project_id>>/alertPolicies/17623358374314480245"
+snooze_schedule:
+  weekday_start_date_time: "2023-10-27T00:55:00+01:00"
+  weekday_end_duration_days: 5
+  weekday_duration: 30
+  weekend_start_time: "21:55"
+  weekend_duration_days: 2
