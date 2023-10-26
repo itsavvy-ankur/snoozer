@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -15,12 +16,14 @@ import (
 
 func main() {
 
+	filepath := flag.String("filepath", "", "A file path for the config file")
+	flag.Parse()
 	loc, err := time.LoadLocation("Europe/London")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	f, err := os.ReadFile("config.yaml")
+	f, err := os.ReadFile(*filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +53,7 @@ func main() {
 				log.Fatal(err)
 			}
 
-			weekendEnd := weekendStart.AddDate(0, 0, snoozeConfig.SnoozeSchedule.WeekendDurationDays)
+			weekendEnd := weekendStart.AddDate(0, 0, 2)
 			err = createCustomSnooze(weekendStart, weekendEnd.Add(time.Minute*30), snoozeConfig)
 			if err != nil {
 				log.Fatal(err)
@@ -114,6 +117,5 @@ type SnoozeConfig struct {
 		WeekdayEndDurationDays int    `yaml:"weekday_end_duration_days"`
 		WeekdayDuration        int    `yaml:"weekday_duration"`
 		WeekendStartTime       string `yaml:"weekend_start_time"`
-		WeekendDurationDays    int    `yaml:"weekend_duration_days"`
 	} `yaml:"snooze_schedule"`
 }
