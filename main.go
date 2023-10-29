@@ -46,9 +46,18 @@ func main() {
 		dayOfWeek := d.Weekday()
 
 		switch dayOfWeek {
-		case time.Friday: // Weekend snooze if from Friday 10pm to Sunday 10pm
-			fmt.Printf("Processing snooze for - %s, %s \n", dayOfWeek, d.Format("2006-01-02"))
-			weekendStart, err := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%sT%s:00+01:00", d.Format("2006-01-02"), snoozeConfig.SnoozeSchedule.WeekendStartTime), loc)
+		case time.Friday:
+			// Friday also includes a snooze around 1 AM
+			// Weekend snooze if from Friday 10pm to Sunday 10pm
+
+			fmt.Printf("Processing snooze for Friday - %s, %s \n", dayOfWeek, d.Format("2006-01-02"))
+			err = createCustomSnooze(d, d.Add(time.Minute*time.Duration(snoozeConfig.SnoozeSchedule.WeekdayDuration)), snoozeConfig)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			fmt.Printf("Processing Weekend snooze for - %s, %s \n", dayOfWeek, d.Format("2006-01-02"))
+			weekendStart, err := time.ParseInLocation(time.RFC3339, fmt.Sprintf("%sT%s:00+00:00", d.Format("2006-01-02"), snoozeConfig.SnoozeSchedule.WeekendStartTime), loc)
 			if err != nil {
 				log.Fatal(err)
 			}
