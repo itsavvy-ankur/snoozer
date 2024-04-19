@@ -4,7 +4,7 @@ go 1.21.3
 
 require (
 	cloud.google.com/go/monitoring v1.16.1
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 	gopkg.in/yaml.v2 v2.2.3
 )
 
